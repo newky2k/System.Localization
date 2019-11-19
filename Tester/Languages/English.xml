@@ -1,0 +1,4 @@
+<LanguageDefintion displayname="English" code="en" subcode="en-gb">
+  <label name="DoneButton">Done</label>
+  <label name="CancelButton">Cancel</label>
+</LanguageDefintion>

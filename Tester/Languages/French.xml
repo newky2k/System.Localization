@@ -1,0 +1,4 @@
+<LanguageDefintion displayname="French" code="fr" subcode="fr">
+  <label name="DoneButton">Terminé</label>
+  <label name="CancelButton">Annuler</label>
+</LanguageDefintion>
