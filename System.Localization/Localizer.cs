@@ -13,7 +13,8 @@ namespace System.Localization
 {
 	public abstract class Localizer<T> : INotifyPropertyChanged where T : new()
 	{
-		#region Fields
+        #region Fields
+        private const string defaultLang = "en";
 		private T _phrases;
 		private string _languagesFolder;
 		private LanguageDefintion _selectedLanguage;
@@ -61,14 +62,19 @@ namespace System.Localization
 			get
 		    {
 				if (_selectedLanguage == null)
-					_selectedLanguage = AvailableLanguages.First();
+                {
+                    _selectedLanguage = AvailableLanguages.FirstOrDefault(x => x.LanguageCode.Equals(defaultLang, StringComparison.OrdinalIgnoreCase));
 
+                    if (_selectedLanguage == null)
+                        _selectedLanguage = AvailableLanguages.First();
+                }
+					
 				return _selectedLanguage;
             }
 			set { _selectedLanguage = value; NotifyPropertyChanged(nameof(SelectedLanguge)); ApplySelectedLanguage(); }
 		}
 
-		protected string LanguagesFolder
+		private string LanguagesFolder
 		{
 			get
 			{
@@ -77,7 +83,7 @@ namespace System.Localization
 
 				return _languagesFolder;
 			}
-			private set { _languagesFolder = value; }
+			set { _languagesFolder = value; }
 		}
 
 		public T Phrases
@@ -110,7 +116,6 @@ namespace System.Localization
 
 			Load();
 		}
-
 
 		/// <summary>
 		/// Generate the language file for the specified language
@@ -197,50 +202,42 @@ namespace System.Localization
 		/// <param name="nameOrCodeOrSubCode"></param>
 		public void SetLanguage(string nameOrCodeOrSubCode)
 		{
-
+            //see if you can match the display name
 			var firstLang = AvailableLanguages.FirstOrDefault(x => x.DisplayName.Equals(nameOrCodeOrSubCode, StringComparison.OrdinalIgnoreCase));
 
+            //then see if you can match the language code
 			if (firstLang == null)
 				firstLang = AvailableLanguages.FirstOrDefault(x => x.LanguageCode.Equals(nameOrCodeOrSubCode, StringComparison.OrdinalIgnoreCase));
 
+            //then see if you can matrch the sub code
 			if (firstLang == null)
 				firstLang = AvailableLanguages.FirstOrDefault(x => x.LanguageSubCode.Equals(nameOrCodeOrSubCode, StringComparison.OrdinalIgnoreCase));
 
-			SelectedLanguge = firstLang;
+            //if still not found and it includes a hyphen find the first matching languge
+            if (firstLang == null && nameOrCodeOrSubCode.Contains("-"))
+            {
+                var langCode = nameOrCodeOrSubCode.Substring(0, nameOrCodeOrSubCode.IndexOf("-"));
+
+                firstLang = AvailableLanguages.FirstOrDefault(x => x.LanguageCode.Equals(langCode, StringComparison.OrdinalIgnoreCase));
+            }
+ 
+            SelectedLanguge = firstLang;
 		}
+
 		#region Private
 
 		private void Load()
 		{
-			var langFiles = Directory.GetFiles(LanguagesFolder, "*.xml");
+            var newLangs = new List<LanguageDefintion>();
 
-			if (langFiles.Count() == 0)
-				throw new Exception("No languages files were found");
+            //load embedded resources first
+            LoadResources(ref newLangs);
 
-			var newLangs = new List<LanguageDefintion>();
+            //load any external files
+            LoadFiles(ref newLangs);
 
-			foreach (var aFile in langFiles)
-			{
-				try
-				{
-					var newDef = LoadDefinition(aFile);
-
-					if (newDef.Labels.Count > 0)
-					{
-						newLangs.Add(newDef);
-					}
-				}
-				catch (Exception)
-				{
-					Console.WriteLine($"cannot process file: {aFile}");
-				}
-
-			}
-
-			_availableLanguages = newLangs;
-
-
-		}
+            _availableLanguages = newLangs;
+        }
 
 		private void WriteToFile(LanguageDefintion target, string fileName)
 		{
@@ -265,7 +262,60 @@ namespace System.Localization
 			}
 		}
 
-		private LanguageDefintion LoadDefinition(string inputFile)
+        /// <summary>
+        /// Load files from the assembly
+        /// </summary>
+        /// <param name="langs"></param>
+        private void LoadResources(ref List<LanguageDefintion> langs)
+        {
+            var asm = GetType().Assembly;
+            var resources = asm.GetManifestResourceNames().Where(x => x.ToLower().Contains("languages")).ToList();
+
+            if (resources.Any())
+            {
+                foreach (var resource in resources)
+                {
+                    var langStream = asm.GetManifestResourceStream(resource);
+
+                    var newLang = LoadDefinition(langStream);
+
+                    langs.Add(newLang);
+                }
+            }
+
+        }
+
+        private void LoadFiles(ref List<LanguageDefintion> langs)
+        {
+            if (!Directory.Exists(LanguagesFolder))
+                return;
+            var langFiles = Directory.GetFiles(LanguagesFolder, "*.xml");
+
+            if (langFiles.Count() == 0)
+                return;
+
+
+            foreach (var aFile in langFiles)
+            {
+                try
+                {
+                    var newDef = LoadDefinition(aFile);
+
+                    if (newDef.Labels.Count > 0)
+                    {
+                        langs.Add(newDef);
+                    }
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine($"cannot process file: {aFile}");
+                }
+
+            }
+ 
+        }
+
+        private LanguageDefintion LoadDefinition(string inputFile)
 		{
 			try
 			{
@@ -290,7 +340,26 @@ namespace System.Localization
 			}
 		}
 
-		private void ApplySelectedLanguage()
+        public LanguageDefintion LoadDefinition(Stream stream)
+        {
+            try
+            {
+
+                var serializer = new XmlSerializer(typeof(LanguageDefintion));
+
+                var output = new LanguageDefintion();
+
+                output = (LanguageDefintion)serializer.Deserialize(stream);
+
+                return output;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        private void ApplySelectedLanguage()
 		{
 			if (SelectedLanguge == null)
 				return;
@@ -329,6 +398,7 @@ namespace System.Localization
 			}
 		}
 		#endregion
+
 		#endregion
 	}
 }

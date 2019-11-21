@@ -9,9 +9,6 @@ namespace Tester
 	{
 		static void Main(string[] args)
 		{
-			//AppLocalizer.Current.Init();
-			AppLocalizer.Current.SetLanguage(Thread.CurrentThread.CurrentUICulture);
-
 			var names = AppLocalizer.Current.AvailableLanguageNames;
 
 			names.ForEach(Console.WriteLine);

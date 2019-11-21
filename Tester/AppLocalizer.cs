@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Localization;
+using System.Threading;
 
 namespace Tester
 {
@@ -11,5 +12,11 @@ namespace Tester
 		{
 			get { return _current.Value; }
 		}
+
+        static AppLocalizer()
+        {
+            
+            Current.SetLanguage(Thread.CurrentThread.CurrentUICulture);
+        }
 	}
 }
