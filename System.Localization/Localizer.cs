@@ -6,30 +6,40 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Xml;
 using System.Xml.Serialization;
 
 namespace System.Localization
 {
-	public abstract class Localizer<T> : INotifyPropertyChanged where T : new()
+	public class Localizer : INotifyPropertyChanged
 	{
+        private static Lazy<Localizer> _current = new Lazy<Localizer>(() => new Localizer());
+
+        public static Localizer Current
+        {
+            get { return _current.Value;}
+        }
+
         #region Fields
         private const string defaultLang = "en";
-		private T _phrases;
 		private string _languagesFolder;
 		private LanguageDefintion _selectedLanguage;
 		private List<LanguageDefintion> _availableLanguages;
 
 		public event PropertyChangedEventHandler PropertyChanged = delegate { };
+        public static event PropertyChangedEventHandler StaticPropertyChanged = delegate { };
 
-		#endregion
+        private Type _phrasesType;
 
-		#region Properties
+        #endregion
 
-		/// <summary>
-		/// List of available languages
-		/// </summary>
-		public List<LanguageDefintion> AvailableLanguages
+        #region Properties
+
+        /// <summary>
+        /// List of available languages
+        /// </summary>
+        public List<LanguageDefintion> AvailableLanguages
 		{
 			get
 			{
@@ -40,7 +50,7 @@ namespace System.Localization
 				return _availableLanguages;
 			}
 
-			private set { _availableLanguages = value; NotifyPropertiesChanged(nameof(AvailableLanguages), nameof(AvailableLanguageNames)); }
+            private set { _availableLanguages = value; NotifyPropertiesChanged(nameof(AvailableLanguages), nameof(AvailableLanguageNames)); }
 		}
 
 		/// <summary>
@@ -66,12 +76,12 @@ namespace System.Localization
                     _selectedLanguage = AvailableLanguages.FirstOrDefault(x => x.LanguageCode.Equals(defaultLang, StringComparison.OrdinalIgnoreCase));
 
                     if (_selectedLanguage == null)
-                        _selectedLanguage = AvailableLanguages.First();
+                        _selectedLanguage = AvailableLanguages.FirstOrDefault();
                 }
 					
 				return _selectedLanguage;
             }
-			set { _selectedLanguage = value; NotifyPropertyChanged(nameof(SelectedLanguge)); ApplySelectedLanguage(); }
+			set { _selectedLanguage = value; NotifyPropertyChanged(); ApplySelectedLanguage(); }
 		}
 
 		private string LanguagesFolder
@@ -79,27 +89,11 @@ namespace System.Localization
 			get
 			{
 				if (string.IsNullOrWhiteSpace(_languagesFolder))
-					_languagesFolder = Path.Combine(Path.GetDirectoryName(typeof(Localizer<>).Assembly.Location),"Languages");
+					_languagesFolder = Path.Combine(Path.GetDirectoryName(typeof(Localizer).Assembly.Location),"Languages");
 
 				return _languagesFolder;
 			}
 			set { _languagesFolder = value; }
-		}
-
-		public T Phrases
-		{
-			get
-			{
-				if (_phrases == null)
-				{
-					_phrases = new T();
-
-					ApplySelectedLanguage();
-				}
-					
-
-				return _phrases;
-			}
 		}
 
 		#endregion
@@ -125,8 +119,11 @@ namespace System.Localization
 		/// <param name="includeCurrentValues">Include the current selected language values for all phrases</param>
 		public void Generate(LanguageOptions options, string outputPath, bool includeCurrentValues = true)
 		{
+            if (_phrasesType == null)
+                throw new Exception("You must register a PhraseType before calling Generate");
+
 			//find all string properties
-			var typeDef = typeof(T).GetProperties(BindingFlags.Instance | BindingFlags.Public).Where(x => x.PropertyType.Equals(typeof(string)));
+			var typeDef = _phrasesType.GetProperties(BindingFlags.Static | BindingFlags.Public).Where(x => x.PropertyType.Equals(typeof(string)));
 
 			var definition = new LanguageDefintion()
 			{
@@ -135,31 +132,31 @@ namespace System.Localization
 				LanguageSubCode = options.LanguageSubCode,
 			};
 
-			foreach (var aProp in typeDef)
-			{
-				var aLabel = aProp.Name;
-				var currentValue = string.Empty;
+            foreach (var aProp in typeDef)
+            {
+                var aLabel = aProp.Name;
+                var currentValue = string.Empty;
 
-				if (includeCurrentValues)
-				{
-					currentValue = aProp.GetValue(Phrases).ToString();
-				}
+                if (includeCurrentValues)
+                {
+                    currentValue = aProp.GetValue(null).ToString();
+                }
 
-				definition.Labels.Add(new LabelDefinition()
-				{
-					Name = aLabel,
-					Phrase = currentValue,
-				});
-			}
+                definition.Labels.Add(new LabelDefinition()
+                {
+                    Name = aLabel,
+                    Phrase = currentValue,
+                });
+            }
 
-			var fileName = Path.Combine(outputPath, $"{options.DisplayName}.xml");
+            var fileName = Path.Combine(outputPath, $"{options.DisplayName}.xml");
 
-			if (File.Exists(fileName))
-				File.Delete(fileName);
+            if (File.Exists(fileName))
+                File.Delete(fileName);
 
-			//serialize
-			WriteToFile(definition, fileName);
-		}
+            //serialize
+            WriteToFile(definition, fileName);
+        }
 
 		/// <summary>
 		/// Generate the language file for the specified languages
@@ -224,6 +221,13 @@ namespace System.Localization
             SelectedLanguge = firstLang;
 		}
 
+        public void Register<T>() where T : PhrasesBase
+        {
+            _phrasesType = typeof(T);
+
+            ApplySelectedLanguage();
+        }
+
 		#region Private
 
 		private void Load()
@@ -268,7 +272,8 @@ namespace System.Localization
         /// <param name="langs"></param>
         private void LoadResources(ref List<LanguageDefintion> langs)
         {
-            var asm = GetType().Assembly;
+            var asm = Assembly.GetEntryAssembly();
+
             var resources = asm.GetManifestResourceNames().Where(x => x.ToLower().Contains("languages")).ToList();
 
             if (resources.Any())
@@ -340,7 +345,7 @@ namespace System.Localization
 			}
 		}
 
-        public LanguageDefintion LoadDefinition(Stream stream)
+        private LanguageDefintion LoadDefinition(Stream stream)
         {
             try
             {
@@ -364,41 +369,49 @@ namespace System.Localization
 			if (SelectedLanguge == null)
 				return;
 
-			//find all string properties
-			var typeDef = typeof(T).GetProperties(BindingFlags.Instance | BindingFlags.Public).Where(x => x.PropertyType.Equals(typeof(string)));
+            if (_phrasesType == null)
+                return;
 
-			foreach (var aProp in typeDef)
-			{
-				var propDef = SelectedLanguge[aProp.Name];
+            //find all string properties
+            var typeDef = _phrasesType.GetProperties(BindingFlags.Static | BindingFlags.Public).Where(x => x.PropertyType.Equals(typeof(string)));
 
-				if (propDef != null)
-				{
-					aProp.SetValue(Phrases, propDef.Phrase);
-				}
-				else
-				{
-					Console.WriteLine($"Label {aProp.Name} not found in selected language");
-				}
-			}
+            foreach (var aProp in typeDef)
+            {
+                var propDef = SelectedLanguge[aProp.Name];
 
-			NotifyPropertyChanged(nameof(Phrases));
+                if (propDef != null)
+                {
+                    aProp.SetValue(null, propDef.Phrase);
+                }
+                else
+                {
+                    Console.WriteLine($"Label {aProp.Name} not found in selected language");
+                }
+            }
 
-		}
+            //NotifyPhrasesChanged(nameof(Phrases));
 
-		private void NotifyPropertyChanged([CallerMemberName] string propertyName = null)
-		{
-			PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-		}
+        }
 
-		private void NotifyPropertiesChanged(params string[] properties)
-		{
-			foreach (var aProp in properties)
-			{
-				NotifyPropertyChanged(aProp);
-			}
-		}
-		#endregion
+        private void NotifyPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+        }
 
-		#endregion
-	}
+        private void NotifyPropertiesChanged(params string[] properties)
+        {
+            foreach (var aProp in properties)
+            {
+                NotifyPropertyChanged(aProp);
+            }
+        }
+        #endregion
+
+        #endregion
+
+        static Localizer()
+        {
+            Current.SetLanguage(Thread.CurrentThread.CurrentUICulture);
+        }
+    }
 }

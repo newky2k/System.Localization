@@ -6,13 +6,13 @@ using System.Text;
 
 namespace System.Localization
 {
-    public abstract class PhrasesBase : INotifyPropertyChanged
+    public abstract class PhrasesBase
     {
-        public event PropertyChangedEventHandler PropertyChanged = delegate { };
+        public static event PropertyChangedEventHandler StaticPropertyChanged = delegate { };
 
-        protected void NotifyPhraseChanged([CallerMemberName] string phrase = null)
+        protected static void NotifyPhraseChanged([CallerMemberName] string phrase = null)
         {
-            PropertyChanged(this, new PropertyChangedEventArgs(phrase));
+            StaticPropertyChanged(null, new PropertyChangedEventArgs(phrase));
         }
 
     }
