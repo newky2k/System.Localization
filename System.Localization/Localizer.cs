@@ -12,25 +12,25 @@ using System.Xml.Serialization;
 
 namespace System.Localization
 {
-	public class Localizer : INotifyPropertyChanged
+	public static class Localizer
 	{
-        private static Lazy<Localizer> _current = new Lazy<Localizer>(() => new Localizer());
+        //private static Lazy<Localizer> _current = new Lazy<Localizer>(() => new Localizer());
 
-        public static Localizer Current
-        {
-            get { return _current.Value;}
-        }
+        //public static Localizer Current
+        //{
+        //    get { return _current.Value;}
+        //}
 
         #region Fields
         private const string defaultLang = "en";
-		private string _languagesFolder;
-		private LanguageDefintion _selectedLanguage;
-		private List<LanguageDefintion> _availableLanguages;
+		private static string _languagesFolder;
+		private static LanguageDefintion _selectedLanguage;
+		private static List<LanguageDefintion> _availableLanguages;
 
-		public event PropertyChangedEventHandler PropertyChanged = delegate { };
+		//public event PropertyChangedEventHandler PropertyChanged = delegate { };
         public static event PropertyChangedEventHandler StaticPropertyChanged = delegate { };
 
-        private Type _phrasesType;
+        private static Type _phrasesType;
 
         #endregion
 
@@ -39,7 +39,7 @@ namespace System.Localization
         /// <summary>
         /// List of available languages
         /// </summary>
-        public List<LanguageDefintion> AvailableLanguages
+        public static List<LanguageDefintion> AvailableLanguages
 		{
 			get
 			{
@@ -56,7 +56,7 @@ namespace System.Localization
 		/// <summary>
 		/// List of the display names of all the available languages
 		/// </summary>
-		public List<string> AvailableLanguageNames
+		public static List<string> AvailableLanguageNames
 		{
 			get
 			{
@@ -67,7 +67,7 @@ namespace System.Localization
 		/// <summary>
 		/// The currently selected Language
 		/// </summary>
-		public LanguageDefintion SelectedLanguge
+		public static LanguageDefintion SelectedLanguge
 		{
 			get
 		    {
@@ -84,7 +84,7 @@ namespace System.Localization
 			set { _selectedLanguage = value; NotifyPropertyChanged(); ApplySelectedLanguage(); }
 		}
 
-		private string LanguagesFolder
+		private static string LanguagesFolder
 		{
 			get
 			{
@@ -96,34 +96,32 @@ namespace System.Localization
 			set { _languagesFolder = value; }
 		}
 
-		#endregion
+        #endregion
 
-		#region Methods
+        #region Methods
 
-		/// <summary>
-		/// Initialize the Localizer with an optional alternative location for the languge files
-		/// </summary>
-		/// <param name="languageFolder"></param>
-		public void Init(string languageFolder = null)
+        /// <summary>
+        /// Initialize the Localizer with an optional alternative location for the languge files
+        /// </summary>
+        /// <param name="languageFolder"></param>
+        public static void Init(string languageFolder = null)
 		{
 			_languagesFolder = languageFolder;
 
 			Load();
 		}
 
-		/// <summary>
-		/// Generate the language file for the specified language
-		/// </summary>
-		/// <param name="options">The language creation options for creating the language definition</param>
-		/// <param name="outputPath">Location to store the generated files</param>
-		/// <param name="includeCurrentValues">Include the current selected language values for all phrases</param>
-		public void Generate(LanguageOptions options, string outputPath, bool includeCurrentValues = true)
-		{
-            if (_phrasesType == null)
-                throw new Exception("You must register a PhraseType before calling Generate");
+        /// <summary>
+        /// Generate the language file for the specified language
+        /// </summary>
+        /// <param name="options">The language creation options for creating the language definition</param>
+        /// <param name="outputPath">Location to store the generated files</param>
+        /// <param name="includeCurrentValues">Include the current selected language values for all phrases</param>
+        public static void Generate<T>(LanguageOptions options, string outputPath, bool includeCurrentValues = true) where T : PhrasesBase
+        { 
 
 			//find all string properties
-			var typeDef = _phrasesType.GetProperties(BindingFlags.Static | BindingFlags.Public).Where(x => x.PropertyType.Equals(typeof(string)));
+			var typeDef = typeof(T).GetProperties(BindingFlags.Static | BindingFlags.Public).Where(x => x.PropertyType.Equals(typeof(string)));
 
 			var definition = new LanguageDefintion()
 			{
@@ -158,31 +156,31 @@ namespace System.Localization
             WriteToFile(definition, fileName);
         }
 
-		/// <summary>
-		/// Generate the language file for the specified languages
-		/// </summary>
-		/// <param name="options">List of LanuageOptions to create</param>
-		/// <param name="outputPath">Location to store the generated files</param>
-		/// <param name="includeCurrentValues">Include the current selected language values for all phrases</param>
-		public void Generate(IEnumerable<LanguageOptions> options, string outputPath, bool includeCurrentValues = true)
-		{
+        /// <summary>
+        /// Generate the language file for the specified languages
+        /// </summary>
+        /// <param name="options">List of LanuageOptions to create</param>
+        /// <param name="outputPath">Location to store the generated files</param>
+        /// <param name="includeCurrentValues">Include the current selected language values for all phrases</param>
+        public static void Generate<T>(IEnumerable<LanguageOptions> options, string outputPath, bool includeCurrentValues = true) where T : PhrasesBase
+        {
 			foreach (var aOption in options)
 			{
-				Generate(aOption, outputPath, includeCurrentValues);
+				Generate<T>(aOption, outputPath, includeCurrentValues);
 			}
 		}
-		/// <summary>
-		/// Validate the language file to ensure it has all the available properties
-		/// </summary>
-		public void Validate()
+        /// <summary>
+        /// Validate the language file to ensure it has all the available properties
+        /// </summary>
+        public static void Validate()
 		{
 
 		}
-		/// <summary>
-		/// Set the language using the specified culture
-		/// </summary>
-		/// <param name="culture"></param>
-		public void SetLanguage(CultureInfo culture)
+        /// <summary>
+        /// Set the language using the specified culture
+        /// </summary>
+        /// <param name="culture"></param>
+        public static void SetLanguage(CultureInfo culture)
 		{
 			var firstLang = AvailableLanguages.FirstOrDefault(x => x.LanguageSubCode.Equals(culture.Name, StringComparison.OrdinalIgnoreCase));
 
@@ -193,11 +191,11 @@ namespace System.Localization
 
 		}
 
-		/// <summary>
-		/// Set the language using a the display name, language code or language sub-code
-		/// </summary>
-		/// <param name="nameOrCodeOrSubCode"></param>
-		public void SetLanguage(string nameOrCodeOrSubCode)
+        /// <summary>
+        /// Set the language using a the display name, language code or language sub-code
+        /// </summary>
+        /// <param name="nameOrCodeOrSubCode"></param>
+        public static void SetLanguage(string nameOrCodeOrSubCode)
 		{
             //see if you can match the display name
 			var firstLang = AvailableLanguages.FirstOrDefault(x => x.DisplayName.Equals(nameOrCodeOrSubCode, StringComparison.OrdinalIgnoreCase));
@@ -221,16 +219,16 @@ namespace System.Localization
             SelectedLanguge = firstLang;
 		}
 
-        public void Register<T>() where T : PhrasesBase
+        public static void Register<T>() where T : PhrasesBase
         {
             _phrasesType = typeof(T);
 
             ApplySelectedLanguage();
         }
 
-		#region Private
+        #region Private
 
-		private void Load()
+        private static void Load()
 		{
             var newLangs = new List<LanguageDefintion>();
 
@@ -243,7 +241,7 @@ namespace System.Localization
             _availableLanguages = newLangs;
         }
 
-		private void WriteToFile(LanguageDefintion target, string fileName)
+        private static void WriteToFile(LanguageDefintion target, string fileName)
 		{
 			var serializer = new XmlSerializer(typeof(LanguageDefintion));
 
@@ -270,7 +268,7 @@ namespace System.Localization
         /// Load files from the assembly
         /// </summary>
         /// <param name="langs"></param>
-        private void LoadResources(ref List<LanguageDefintion> langs)
+        private static void LoadResources(ref List<LanguageDefintion> langs)
         {
             var asm = Assembly.GetEntryAssembly();
 
@@ -290,7 +288,7 @@ namespace System.Localization
 
         }
 
-        private void LoadFiles(ref List<LanguageDefintion> langs)
+        private static void LoadFiles(ref List<LanguageDefintion> langs)
         {
             if (!Directory.Exists(LanguagesFolder))
                 return;
@@ -320,7 +318,7 @@ namespace System.Localization
  
         }
 
-        private LanguageDefintion LoadDefinition(string inputFile)
+        private static LanguageDefintion LoadDefinition(string inputFile)
 		{
 			try
 			{
@@ -345,7 +343,7 @@ namespace System.Localization
 			}
 		}
 
-        private LanguageDefintion LoadDefinition(Stream stream)
+        private static LanguageDefintion LoadDefinition(Stream stream)
         {
             try
             {
@@ -364,7 +362,7 @@ namespace System.Localization
             }
         }
 
-        private void ApplySelectedLanguage()
+        private static void ApplySelectedLanguage()
 		{
 			if (SelectedLanguge == null)
 				return;
@@ -393,12 +391,12 @@ namespace System.Localization
 
         }
 
-        private void NotifyPropertyChanged([CallerMemberName] string propertyName = null)
+        private static void NotifyPropertyChanged([CallerMemberName] string propertyName = null)
         {
-            PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+            StaticPropertyChanged(null, new PropertyChangedEventArgs(propertyName));
         }
 
-        private void NotifyPropertiesChanged(params string[] properties)
+        private static void NotifyPropertiesChanged(params string[] properties)
         {
             foreach (var aProp in properties)
             {
@@ -411,7 +409,7 @@ namespace System.Localization
 
         static Localizer()
         {
-            Current.SetLanguage(Thread.CurrentThread.CurrentUICulture);
+            SetLanguage(Thread.CurrentThread.CurrentUICulture);
         }
     }
 }

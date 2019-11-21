@@ -26,7 +26,7 @@ namespace LocalisationSample
 
         static Phrases()
         {
-            Localizer.Current.Register<Phrases>();
+            Localizer.Register<Phrases>();
         }
     }
 }
