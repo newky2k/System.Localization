@@ -1,16 +1,27 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Localization;
 
 namespace Tester
 {
-	public class Lables
+	public class Lables : PhrasesBase
 	{
-		public string DoneButton { get; set; } = "Done t";
+        private string _doneButton = "Done t";
+        private string _cancelButton = "Cancel t";
 
-		public string CancelButton { get; set; } = "Cancel t";
+        public string DoneButton
+        {
+            get { return _doneButton; }
+            set { _doneButton = value; NotifyPhraseChanged(); }
+        }
 
-		public Lables()
-		{
-		}
-	}
+        
+        public string CancelButton
+        {
+            get { return _cancelButton; }
+            set { _cancelButton = value; NotifyPhraseChanged(); }
+        }
+
+
+    }
 }
