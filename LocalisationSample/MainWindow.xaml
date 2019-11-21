@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LocalisationSample"
+        xmlns:Localisation="clr-namespace:System.Localization;assembly=System.Localization"
         mc:Ignorable="d"
         Title="MainWindow" Height="320" Width="480">
     <Grid>
@@ -11,9 +12,13 @@
             <RowDefinition Height="* " />
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
+        <StackPanel Margin="10">
+            <Label>Selected Language</Label>
+            <ComboBox ItemsSource="{x:Static Localisation:Localizer.AvailableLanguages}" DisplayMemberPath="DisplayName" SelectedItem="{Binding Path=(Localisation:Localizer.SelectedLanguge),Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+        </StackPanel>
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="{x:Static local:Phrases.DoneButton}" Margin="5" />
-            <Button Content="{x:Static local:Phrases.CancelButton}" Margin="5"/>
+            <Button Content="{Binding Path=(local:Phrases.DoneButton)}" Margin="5" />
+            <Button Content="{Binding Path=(local:Phrases.CancelButton)}" Margin="5"/>
         </StackPanel>
     </Grid>
 </Window>

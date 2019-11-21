@@ -6,27 +6,30 @@ using System.Threading;
 
 namespace LocalisationSample
 {
-    public class Phrases : PhrasesBase
+    [PhraseProvider]
+    public class Phrases
     {
         private static string _doneButton = "Done t";
         private static string _cancelButton = "Cancel t";
 
+
+        public static event EventHandler DoneButtonChanged;
         public static string DoneButton
         {
             get { return _doneButton; }
-            set { _doneButton = value; NotifyPhraseChanged(); }
+            set 
+            {
+                _doneButton = value; DoneButtonChanged?.Invoke(null, EventArgs.Empty);
+            }
         }
 
-
+        public static event EventHandler CancelButtonChanged;
         public static string CancelButton
         {
             get { return _cancelButton; }
-            set { _cancelButton = value; NotifyPhraseChanged(); }
+            set { _cancelButton = value; CancelButtonChanged?.Invoke(null, EventArgs.Empty); }
         }
 
-        static Phrases()
-        {
-            Localizer.Register<Phrases>();
-        }
+
     }
 }

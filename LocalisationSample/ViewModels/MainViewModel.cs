@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Localization;
 using System.Mvvm;
 using System.Text;
 

@@ -30,7 +30,7 @@ namespace System.Localization
 		//public event PropertyChangedEventHandler PropertyChanged = delegate { };
         public static event PropertyChangedEventHandler StaticPropertyChanged = delegate { };
 
-        private static Type _phrasesType;
+        private static List<Type> _phrasesTypes = new List<Type>();
 
         #endregion
 
@@ -45,7 +45,12 @@ namespace System.Localization
 			{
 				//
 				if (_availableLanguages == null)
-					Load();
+                {
+                    Load();
+
+                    ApplySelectedLanguage();
+                }
+					
 
 				return _availableLanguages;
 			}
@@ -64,10 +69,11 @@ namespace System.Localization
 			}
 		}
 
-		/// <summary>
-		/// The currently selected Language
-		/// </summary>
-		public static LanguageDefintion SelectedLanguge
+        public static event EventHandler SelectedLangugeChanged;
+        /// <summary>
+        /// The currently selected Language
+        /// </summary>
+        public static LanguageDefintion SelectedLanguge
 		{
 			get
 		    {
@@ -81,7 +87,11 @@ namespace System.Localization
 					
 				return _selectedLanguage;
             }
-			set { _selectedLanguage = value; NotifyPropertyChanged(); ApplySelectedLanguage(); }
+			set 
+            { 
+                _selectedLanguage = value;
+                SelectedLangugeChanged?.Invoke(null, EventArgs.Empty);
+                ApplySelectedLanguage(); }
 		}
 
 		private static string LanguagesFolder
@@ -109,7 +119,9 @@ namespace System.Localization
 			_languagesFolder = languageFolder;
 
 			Load();
-		}
+
+            ApplySelectedLanguage();
+        }
 
         /// <summary>
         /// Generate the language file for the specified language
@@ -117,7 +129,7 @@ namespace System.Localization
         /// <param name="options">The language creation options for creating the language definition</param>
         /// <param name="outputPath">Location to store the generated files</param>
         /// <param name="includeCurrentValues">Include the current selected language values for all phrases</param>
-        public static void Generate<T>(LanguageOptions options, string outputPath, bool includeCurrentValues = true) where T : PhrasesBase
+        public static void Generate<T>(LanguageOptions options, string outputPath, bool includeCurrentValues = true)
         { 
 
 			//find all string properties
@@ -162,7 +174,7 @@ namespace System.Localization
         /// <param name="options">List of LanuageOptions to create</param>
         /// <param name="outputPath">Location to store the generated files</param>
         /// <param name="includeCurrentValues">Include the current selected language values for all phrases</param>
-        public static void Generate<T>(IEnumerable<LanguageOptions> options, string outputPath, bool includeCurrentValues = true) where T : PhrasesBase
+        public static void Generate<T>(IEnumerable<LanguageOptions> options, string outputPath, bool includeCurrentValues = true)
         {
 			foreach (var aOption in options)
 			{
@@ -219,9 +231,12 @@ namespace System.Localization
             SelectedLanguge = firstLang;
 		}
 
-        public static void Register<T>() where T : PhrasesBase
+        public static void Register<T>()
         {
-            _phrasesType = typeof(T);
+            var rType = typeof(T);
+
+            if (_phrasesTypes.Contains(rType))
+                _phrasesTypes.Add(rType);
 
             ApplySelectedLanguage();
         }
@@ -231,6 +246,8 @@ namespace System.Localization
         private static void Load()
 		{
             var newLangs = new List<LanguageDefintion>();
+
+            LoadPhraseProviders();
 
             //load embedded resources first
             LoadResources(ref newLangs);
@@ -263,6 +280,28 @@ namespace System.Localization
 				File.WriteAllText(fileName, output);
 			}
 		}
+
+        /// <summary>
+        /// Loads the phrase providers.
+        /// </summary>
+        /// <exception cref="System.NotImplementedException"></exception>
+        private static void LoadPhraseProviders()
+        {
+            var asm = Assembly.GetEntryAssembly();
+
+            var types = asm.GetTypes();
+            foreach (var aType in types)
+            {
+                var attrs = aType.GetCustomAttributes<PhraseProviderAttribute>();
+
+                if (attrs.Any())
+                {
+                    if (!_phrasesTypes.Contains(aType))
+                        _phrasesTypes.Add(aType);
+                }
+                
+            }
+        }
 
         /// <summary>
         /// Load files from the assembly
@@ -367,27 +406,28 @@ namespace System.Localization
 			if (SelectedLanguge == null)
 				return;
 
-            if (_phrasesType == null)
+            if (_phrasesTypes == null || _phrasesTypes.Count == 0)
                 return;
 
-            //find all string properties
-            var typeDef = _phrasesType.GetProperties(BindingFlags.Static | BindingFlags.Public).Where(x => x.PropertyType.Equals(typeof(string)));
-
-            foreach (var aProp in typeDef)
+            foreach (var phrasesType in _phrasesTypes)
             {
-                var propDef = SelectedLanguge[aProp.Name];
+                //find all string properties
+                var typeDef = phrasesType.GetProperties(BindingFlags.Static | BindingFlags.Public).Where(x => x.PropertyType.Equals(typeof(string)));
 
-                if (propDef != null)
+                foreach (var aProp in typeDef)
                 {
-                    aProp.SetValue(null, propDef.Phrase);
-                }
-                else
-                {
-                    Console.WriteLine($"Label {aProp.Name} not found in selected language");
+                    var propDef = SelectedLanguge[aProp.Name];
+
+                    if (propDef != null)
+                    {
+                        aProp.SetValue(null, propDef.Phrase);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Label {aProp.Name} not found in selected language");
+                    }
                 }
             }
-
-            //NotifyPhrasesChanged(nameof(Phrases));
 
         }
 
@@ -407,9 +447,6 @@ namespace System.Localization
 
         #endregion
 
-        static Localizer()
-        {
-            SetLanguage(Thread.CurrentThread.CurrentUICulture);
-        }
+        
     }
 }

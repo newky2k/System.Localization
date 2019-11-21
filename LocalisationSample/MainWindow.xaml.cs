@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LocalisationSample.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,9 +21,19 @@ namespace LocalisationSample
     /// </summary>
     public partial class MainWindow : Window
     {
+        private MainViewModel _viewModel;
+
+        public MainViewModel ViewModel
+        {
+            get { return _viewModel; }
+            set { _viewModel = value; DataContext = value; }
+        }
+
         public MainWindow()
         {
             InitializeComponent();
+
+            ViewModel = new MainViewModel();
         }
     }
 }
