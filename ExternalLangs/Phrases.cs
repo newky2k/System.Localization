@@ -56,5 +56,10 @@ namespace ExternalLangs
         {
             Localizer.Register(this);
         }
+
+        ~Phrases()
+        {
+            Localizer.DeRegister(this);
+        }
     }
 }
