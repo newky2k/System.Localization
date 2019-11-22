@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
+[assembly: ExternalPhraseProvider(typeof(ExternalLangs.Phrases))]
 namespace LocalisationSample
 {
     /// <summary>

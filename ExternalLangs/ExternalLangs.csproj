@@ -1,18 +1,20 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
-    <UseWPF>true</UseWPF>
+    <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="Languages\English.xml" />
     <None Remove="Languages\French.xml" />
+    <None Remove="Languages\Spanish.xml" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Languages\English.xml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Languages\Spanish.xml">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </EmbeddedResource>
     <EmbeddedResource Include="Languages\French.xml">
@@ -21,11 +23,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="DSoft.System.Mvvm" Version="1.2.1911.212" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\ExternalLangs\ExternalLangs.csproj" />
     <ProjectReference Include="..\System.Localization\System.Localization.csproj" />
   </ItemGroup>
 

@@ -14,4 +14,16 @@ namespace System.Localization
 
         //public Type ProviderType { get; set; }
     }
+
+    [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = false)]
+    public class ExternalPhraseProviderAttribute : Attribute
+    {
+        public ExternalPhraseProviderAttribute(Type type)
+        {
+            ProviderType = type;
+        }
+
+        public Type ProviderType { get; set; }
+    }
+
 }

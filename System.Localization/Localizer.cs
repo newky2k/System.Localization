@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Localization.Collections;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -24,11 +25,11 @@ namespace System.Localization
         #region Fields
         private const string defaultLang = "en";
 		private static string _languagesFolder;
-		private static LanguageDefintion _selectedLanguage;
-		private static List<LanguageDefintion> _availableLanguages;
+		private static Language _selectedLanguage;
 
-		//public event PropertyChangedEventHandler PropertyChanged = delegate { };
-        public static event PropertyChangedEventHandler StaticPropertyChanged = delegate { };
+
+        private static LanguagesCollection _languages = new LanguagesCollection();
+        private static LanguageSetCollection _langSets = new LanguageSetCollection();
 
         private static List<Type> _phrasesTypes = new List<Type>();
 
@@ -36,27 +37,21 @@ namespace System.Localization
 
         #region Properties
 
-        /// <summary>
-        /// List of available languages
-        /// </summary>
-        public static List<LanguageDefintion> AvailableLanguages
-		{
-			get
-			{
-				//
-				if (_availableLanguages == null)
+        public static LanguagesCollection AvailableLanguages
+        {
+            get 
+            {
+                if (_languages.Count == 0)
                 {
                     Load();
 
                     ApplySelectedLanguage();
                 }
-					
 
-				return _availableLanguages;
-			}
-
-            private set { _availableLanguages = value; NotifyPropertiesChanged(nameof(AvailableLanguages), nameof(AvailableLanguageNames)); }
-		}
+                return _languages; 
+            }
+            set { _languages = value; }
+        }
 
 		/// <summary>
 		/// List of the display names of all the available languages
@@ -73,7 +68,7 @@ namespace System.Localization
         /// <summary>
         /// The currently selected Language
         /// </summary>
-        public static LanguageDefintion SelectedLanguge
+        public static Language SelectedLanguge
 		{
 			get
 		    {
@@ -244,18 +239,14 @@ namespace System.Localization
         #region Private
 
         private static void Load()
-		{
-            var newLangs = new List<LanguageDefintion>();
-
+		{            
             LoadPhraseProviders();
 
             //load embedded resources first
-            LoadResources(ref newLangs);
+            LoadResources();
 
             //load any external files
-            LoadFiles(ref newLangs);
-
-            _availableLanguages = newLangs;
+            LoadFiles();
         }
 
         private static void WriteToFile(LanguageDefintion target, string fileName)
@@ -287,8 +278,10 @@ namespace System.Localization
         /// <exception cref="System.NotImplementedException"></exception>
         private static void LoadPhraseProviders()
         {
+            
             var asm = Assembly.GetEntryAssembly();
 
+            //Find items in the main app assembly
             var types = asm.GetTypes();
             foreach (var aType in types)
             {
@@ -299,35 +292,65 @@ namespace System.Localization
                     if (!_phrasesTypes.Contains(aType))
                         _phrasesTypes.Add(aType);
                 }
-                
+
             }
+
+            //find a External Lang providers
+            var attts = asm.GetCustomAttributes<ExternalPhraseProviderAttribute>();
+
+            if (attts.Any())
+            {
+                foreach (var attr in attts)
+                {
+                    var aType = attr.ProviderType;
+
+                    if (!_phrasesTypes.Contains(aType))
+                        _phrasesTypes.Add(aType);
+                }
+            }
+
+
+
         }
 
         /// <summary>
         /// Load files from the assembly
         /// </summary>
         /// <param name="langs"></param>
-        private static void LoadResources(ref List<LanguageDefintion> langs)
+        private static void LoadResources()
         {
-            var asm = Assembly.GetEntryAssembly();
+            var curAssms = new List<Assembly>();
 
-            var resources = asm.GetManifestResourceNames().Where(x => x.ToLower().Contains("languages")).ToList();
-
-            if (resources.Any())
+            foreach (var aTtpe in _phrasesTypes)
             {
-                foreach (var resource in resources)
+                var curAsm = aTtpe.Assembly;
+
+                //check to see if the assembly has already been loaded
+                if (!curAssms.Contains(curAsm))
                 {
-                    var langStream = asm.GetManifestResourceStream(resource);
+                    var resources = curAsm.GetManifestResourceNames().Where(x => x.ToLower().Contains("languages")).ToList();
 
-                    var newLang = LoadDefinition(langStream);
+                    if (resources.Any())
+                    {
+                        foreach (var resource in resources)
+                        {
+                            var langStream = curAsm.GetManifestResourceStream(resource);
 
-                    langs.Add(newLang);
+                            var newLang = LoadDefinition(langStream);
+
+                            AddLanguage(newLang);
+                        }
+                    }
+
+                    curAssms.Add(curAsm);
                 }
+
             }
+
 
         }
 
-        private static void LoadFiles(ref List<LanguageDefintion> langs)
+        private static void LoadFiles()
         {
             if (!Directory.Exists(LanguagesFolder))
                 return;
@@ -345,7 +368,8 @@ namespace System.Localization
 
                     if (newDef.Labels.Count > 0)
                     {
-                        langs.Add(newDef);
+
+                        AddLanguage(newDef);
                     }
                 }
                 catch (Exception)
@@ -355,6 +379,27 @@ namespace System.Localization
 
             }
  
+        }
+
+        private static void AddLanguage(LanguageDefintion langDef)
+        {
+            if (_langSets.Contains(langDef))
+            {
+                var langSet = _langSets[langDef];
+
+                langSet.AddPhrases(langDef.Labels);
+            }
+            else
+            {
+                if (!_languages.Contains(langDef))
+                    _languages.Add(new Language(langDef));
+
+                var langSet = new LanguageSet(_languages[langDef]);
+
+                langSet.AddPhrases(langDef.Labels);
+
+                _langSets.Add(langSet);
+            }
         }
 
         private static LanguageDefintion LoadDefinition(string inputFile)
@@ -409,6 +454,8 @@ namespace System.Localization
             if (_phrasesTypes == null || _phrasesTypes.Count == 0)
                 return;
 
+            var langSet = _langSets[SelectedLanguge];
+
             foreach (var phrasesType in _phrasesTypes)
             {
                 //find all string properties
@@ -416,11 +463,11 @@ namespace System.Localization
 
                 foreach (var aProp in typeDef)
                 {
-                    var propDef = SelectedLanguge[aProp.Name];
+                    var propDef = langSet[aProp.Name];
 
                     if (propDef != null)
                     {
-                        aProp.SetValue(null, propDef.Phrase);
+                        aProp.SetValue(null, propDef.Value);
                     }
                     else
                     {
@@ -429,19 +476,6 @@ namespace System.Localization
                 }
             }
 
-        }
-
-        private static void NotifyPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            StaticPropertyChanged(null, new PropertyChangedEventArgs(propertyName));
-        }
-
-        private static void NotifyPropertiesChanged(params string[] properties)
-        {
-            foreach (var aProp in properties)
-            {
-                NotifyPropertyChanged(aProp);
-            }
         }
         #endregion
 

@@ -1,0 +1,5 @@
+<LanguageDefintion displayname="Spanish" code="es" subcode="es-es">
+  <label name="DoneButton">Hecho</label>
+  <label name="CancelButton">Cancelar</label>
+  <label name="OtherButton">Otra</label>
+</LanguageDefintion>

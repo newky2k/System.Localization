@@ -4,14 +4,13 @@ using System.Localization;
 using System.Text;
 using System.Threading;
 
-namespace LocalisationSample
+namespace ExternalLangs
 {
     [PhraseProvider]
     public class Phrases
     {
         private static string _doneButton = "Done t";
         private static string _cancelButton = "Cancel t";
-        private static string _otherButton = "Other t";
 
 
         public static event EventHandler DoneButtonChanged;
@@ -29,13 +28,6 @@ namespace LocalisationSample
         {
             get { return _cancelButton; }
             set { _cancelButton = value; CancelButtonChanged?.Invoke(null, EventArgs.Empty); }
-        }
-
-        public static event EventHandler OtherButtonChanged;
-        public static string OtherButton
-        {
-            get { return _otherButton; }
-            set { _otherButton = value; OtherButtonChanged?.Invoke(null, EventArgs.Empty); }
         }
 
 

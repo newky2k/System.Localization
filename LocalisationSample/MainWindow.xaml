@@ -19,6 +19,7 @@
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="{Binding Path=(local:Phrases.DoneButton)}" Margin="5" />
             <Button Content="{Binding Path=(local:Phrases.CancelButton)}" Margin="5"/>
+            <Button Content="{Binding Path=(local:Phrases.OtherButton)}" Margin="5"/>
         </StackPanel>
     </Grid>
 </Window>
