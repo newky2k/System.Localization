@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Localization;
 using System.Text;
 using System.Threading;
@@ -7,29 +8,53 @@ using System.Threading;
 namespace ExternalLangs
 {
     [PhraseProvider]
-    public class Phrases
+    public class Phrases : INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler PropertyChanged = delegate { };
+
         private static string _doneButton = "Done t";
         private static string _cancelButton = "Cancel t";
+        private string _otherButton = "Other t";
 
-
-        public static event EventHandler DoneButtonChanged;
-        public static string DoneButton
+        public string DoneButton
         {
             get { return _doneButton; }
-            set 
+            set
             {
-                _doneButton = value; DoneButtonChanged?.Invoke(null, EventArgs.Empty);
+                if (_doneButton != value)
+                {
+                    _doneButton = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DoneButton)));
+                }
+            }
+        }
+        public string CancelButton
+        {
+            get { return _cancelButton; }
+            set
+            {
+                if (_cancelButton != value)
+                {
+                    _cancelButton = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CancelButton)));
+                }
             }
         }
 
-        public static event EventHandler CancelButtonChanged;
-        public static string CancelButton
+        public string OtherButton
         {
-            get { return _cancelButton; }
-            set { _cancelButton = value; CancelButtonChanged?.Invoke(null, EventArgs.Empty); }
+            get { return _otherButton; }
+            set
+            {
+                if (_otherButton != value)
+                {
+                    _otherButton = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(OtherButton)));
+                }
+            }
         }
 
 
+        public Phrases()
+        {
+            Localizer.Register(this);
+        }
     }
 }

@@ -4,9 +4,13 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LocalisationSample"
+        xmlns:extern="clr-namespace:ExternalLangs;assembly=ExternalLangs"
         xmlns:Localisation="clr-namespace:System.Localization;assembly=System.Localization"
         mc:Ignorable="d"
         Title="MainWindow" Height="320" Width="480">
+    <Window.Resources>
+        <extern:Phrases x:Key="phrases"/>
+    </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="* " />
@@ -14,12 +18,12 @@
         </Grid.RowDefinitions>
         <StackPanel Margin="10">
             <Label>Selected Language</Label>
-            <ComboBox ItemsSource="{x:Static Localisation:Localizer.AvailableLanguages}" DisplayMemberPath="DisplayName" SelectedItem="{Binding Path=(Localisation:Localizer.SelectedLanguge),Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            <ComboBox ItemsSource="{Binding Path=(Localisation:Localizer.AvailableLanguages)}" DisplayMemberPath="DisplayName" SelectedItem="{Binding Path=(Localisation:Localizer.SelectedLanguage),Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
         </StackPanel>
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="{Binding Path=(local:Phrases.DoneButton)}" Margin="5" />
-            <Button Content="{Binding Path=(local:Phrases.CancelButton)}" Margin="5"/>
-            <Button Content="{Binding Path=(local:Phrases.OtherButton)}" Margin="5"/>
+            <Button Content="{Binding Source={StaticResource phrases},Path=DoneButton}" Margin="5" />
+            <Button Content="{Binding Source={StaticResource phrases},Path=CancelButton}" Margin="5"/>
+            <Button Content="{Binding Source={StaticResource phrases},Path=OtherButton}" Margin="5"/>
         </StackPanel>
     </Grid>
 </Window>

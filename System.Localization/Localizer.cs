@@ -13,7 +13,7 @@ using System.Xml.Serialization;
 
 namespace System.Localization
 {
-	public static class Localizer
+	public class Localizer
 	{
         //private static Lazy<Localizer> _current = new Lazy<Localizer>(() => new Localizer());
 
@@ -32,7 +32,7 @@ namespace System.Localization
         private static LanguageSetCollection _langSets = new LanguageSetCollection();
 
         private static List<Type> _phrasesTypes = new List<Type>();
-
+        private static List<object> _instances = new List<object>();
         #endregion
 
         #region Properties
@@ -53,24 +53,13 @@ namespace System.Localization
             set { _languages = value; }
         }
 
-		/// <summary>
-		/// List of the display names of all the available languages
-		/// </summary>
-		public static List<string> AvailableLanguageNames
-		{
-			get
-			{
-				return AvailableLanguages.Select(x => x.DisplayName).ToList();
-			}
-		}
-
-        public static event EventHandler SelectedLangugeChanged;
+        public static event EventHandler SelectedLanguageChanged;
         /// <summary>
         /// The currently selected Language
         /// </summary>
-        public static Language SelectedLanguge
-		{
-			get
+        public static Language SelectedLanguage
+        { 
+            get
 		    {
 				if (_selectedLanguage == null)
                 {
@@ -85,7 +74,7 @@ namespace System.Localization
 			set 
             { 
                 _selectedLanguage = value;
-                SelectedLangugeChanged?.Invoke(null, EventArgs.Empty);
+                SelectedLanguageChanged?.Invoke(null, EventArgs.Empty);
                 ApplySelectedLanguage(); }
 		}
 
@@ -194,7 +183,7 @@ namespace System.Localization
 			if (firstLang == null)
 				firstLang = AvailableLanguages.FirstOrDefault(x => x.LanguageCode.Equals(culture.TwoLetterISOLanguageName, StringComparison.OrdinalIgnoreCase));
 
-			SelectedLanguge = firstLang;
+            SelectedLanguage = firstLang;
 
 		}
 
@@ -222,8 +211,8 @@ namespace System.Localization
 
                 firstLang = AvailableLanguages.FirstOrDefault(x => x.LanguageCode.Equals(langCode, StringComparison.OrdinalIgnoreCase));
             }
- 
-            SelectedLanguge = firstLang;
+
+            SelectedLanguage = firstLang;
 		}
 
         public static void Register<T>()
@@ -234,6 +223,20 @@ namespace System.Localization
                 _phrasesTypes.Add(rType);
 
             ApplySelectedLanguage();
+        }
+
+        public static void Register(object instance)
+        {
+            if (!_instances.Contains(instance))
+                _instances.Add(instance);
+
+            ApplySelectedLanguage();
+        }
+
+        public static void DeRegister(object instance)
+        {
+            if (_instances.Contains(instance))
+                _instances.Remove(instance);
         }
 
         #region Private
@@ -448,13 +451,13 @@ namespace System.Localization
 
         private static void ApplySelectedLanguage()
 		{
-			if (SelectedLanguge == null)
+			if (SelectedLanguage == null && _languages != null)
 				return;
 
             if (_phrasesTypes == null || _phrasesTypes.Count == 0)
                 return;
 
-            var langSet = _langSets[SelectedLanguge];
+            var langSet = _langSets[SelectedLanguage];
 
             foreach (var phrasesType in _phrasesTypes)
             {
@@ -476,11 +479,33 @@ namespace System.Localization
                 }
             }
 
+            foreach (var inst in _instances)
+            {
+                //find all string properties
+                var typeDef = inst.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public).Where(x => x.PropertyType.Equals(typeof(string)));
+
+                foreach (var aProp in typeDef)
+                {
+                    var propDef = langSet[aProp.Name];
+
+                    if (propDef != null)
+                    {
+                        aProp.SetValue(inst, propDef.Value);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Label {aProp.Name} not found in selected language");
+                    }
+                }
+            }
         }
         #endregion
 
         #endregion
 
-        
+        public Localizer()
+        {
+
+        }
     }
 }

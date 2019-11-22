@@ -38,6 +38,10 @@ namespace LocalisationSample
             set { _otherButton = value; OtherButtonChanged?.Invoke(null, EventArgs.Empty); }
         }
 
+        public Phrases()
+        {
+            
+        }
 
     }
 }

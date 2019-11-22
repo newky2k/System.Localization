@@ -1,0 +1,10 @@
+﻿<Application
+    x:Class="UWPLocalizationSample.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:localizer="using:System.Localization"
+    xmlns:local="using:UWPLocalizationSample">
+    <Application.Resources>
+        <localizer:Localizer x:Key="c1"/>
+    </Application.Resources>
+</Application>
