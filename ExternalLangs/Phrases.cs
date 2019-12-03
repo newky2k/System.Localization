@@ -51,6 +51,16 @@ namespace ExternalLangs
             }
         }
 
+        private string _otherbutton2 = "Other 2 t";
+
+        [PhraseProperty("OtherButton")]
+        public string OtherButton2
+        {
+            get { return _otherbutton2; }
+            set { _otherbutton2 = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(OtherButton2)));
+            }
+        }
+
 
         public Phrases()
         {

@@ -24,6 +24,7 @@
             <Button Content="{Binding Source={StaticResource phrases},Path=DoneButton}" Margin="5" />
             <Button Content="{Binding Source={StaticResource phrases},Path=CancelButton}" Margin="5"/>
             <Button Content="{Binding Source={StaticResource phrases},Path=OtherButton}" Margin="5"/>
+            <Button Content="{Binding Source={StaticResource phrases},Path=OtherButton2}" Margin="5"/>
         </StackPanel>
     </Grid>
 </Window>
