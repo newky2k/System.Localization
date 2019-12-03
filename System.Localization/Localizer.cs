@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -466,16 +467,48 @@ namespace System.Localization
 
                 foreach (var aProp in typeDef)
                 {
-                    var propDef = langSet[aProp.Name];
+                    try
+                    {
+                        var propDef = langSet[aProp.Name];
 
-                    if (propDef != null)
-                    {
-                        aProp.SetValue(null, propDef.Value);
+                        if (propDef != null)
+                        {
+                            aProp.SetValue(null, propDef.Value);
+                        }
+                        else
+                        {
+                            var phrasePropAttr = aProp.GetCustomAttribute<PhrasePropertyAttribute>();
+
+                            if (phrasePropAttr != null && !string.IsNullOrWhiteSpace(phrasePropAttr.PhraseKey))
+                            {
+                                var phraseDef = langSet[phrasePropAttr.PhraseKey];
+
+                                if (phraseDef != null)
+                                {
+                                    aProp.SetValue(null, phraseDef.Value);
+                                }
+                                else
+                                {
+                                    throw new PhraseNotFoundException($"Label {aProp.Name} not found in selected language");
+                                }
+                            }
+                            else
+                            {
+                                throw new PhraseNotFoundException($"Label {aProp.Name} not found in selected language");
+                            }
+
+
+                        }
                     }
-                    else
+                    catch (PhraseNotFoundException ex)
                     {
-                        Console.WriteLine($"Label {aProp.Name} not found in selected language");
+                        Debug.WriteLine(ex.Message);
                     }
+                    catch (Exception)
+                    {
+                        throw;
+                    }
+
                 }
             }
 
@@ -486,16 +519,48 @@ namespace System.Localization
 
                 foreach (var aProp in typeDef)
                 {
-                    var propDef = langSet[aProp.Name];
+                    try
+                    {
+                        var propDef = langSet[aProp.Name];
 
-                    if (propDef != null)
-                    {
-                        aProp.SetValue(inst, propDef.Value);
+                        if (propDef != null)
+                        {
+                            aProp.SetValue(inst, propDef.Value);
+                        }
+                        else
+                        {
+                            var phrasePropAttr = aProp.GetCustomAttribute<PhrasePropertyAttribute>();
+
+                            if (phrasePropAttr != null && !string.IsNullOrWhiteSpace(phrasePropAttr.PhraseKey))
+                            {
+                                var phraseDef = langSet[phrasePropAttr.PhraseKey];
+
+                                if (phraseDef != null)
+                                {
+                                    aProp.SetValue(inst, phraseDef.Value);
+                                }
+                                else
+                                {
+                                    throw new PhraseNotFoundException($"Label {aProp.Name} not found in selected language");
+                                }
+                            }
+                            else
+                            {
+                                throw new PhraseNotFoundException($"Label {aProp.Name} not found in selected language");
+                            }
+
+
+                        }
                     }
-                    else
+                    catch (PhraseNotFoundException ex)
                     {
-                        Console.WriteLine($"Label {aProp.Name} not found in selected language");
+                        Debug.WriteLine(ex.Message);
                     }
+                    catch (Exception)
+                    {
+                        throw;
+                    }
+                    
                 }
             }
         }
